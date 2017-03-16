@@ -1,15 +1,16 @@
 from hs import unity as _unity
 
 @_unity
-def Capture(_path='', _alpha=True, _width=0, _height=0, _rate=1):
+def capture(_path='', _alpha=True, autofit=True):
     import System
+    import Manager
     from System import *
     from System.IO import *
     from UnityEngine import *
     from UnityEngine import Object as Object
-    
-    width = (_width if _width != 0 else Screen.width) * _rate
-    height = (_height if _height != 0 else Screen.height) * _rate
+    from UnityEngine import Time as Time
+    width = Screen.width
+    height = Screen.height
     tex = Texture2D(width, height, TextureFormat.RGB24 if not _alpha else TextureFormat.ARGB32, False)
     tex2 = Texture2D(width, height, TextureFormat.RGB24 if not _alpha else TextureFormat.ARGB32, False)
     if QualitySettings.antiAliasing != 0:
@@ -46,25 +47,52 @@ def Capture(_path='', _alpha=True, _width=0, _height=0, _rate=1):
     RenderTexture.active = None
     RenderCam.backgroundColor = oldBackground
     RenderCam.clearFlags = oldFlags
+    RenderTexture.ReleaseTemporary(rt)
+    RenderTexture.ReleaseTemporary(rt2)
+    
     cols1 = tex.GetPixels()
     cols2 = tex2.GetPixels()
+    x1, x2 = width, 0
+    y1, y2 = height, 0
+    
     for i in xrange(0,cols1.Length-1):
         c1 = cols1[i]
         c2 = cols2[i]
-        if c1 == c2: continue
-        #var a = 1.0f - Math.Min(Math.Abs(c1.r - c2.r), Math.Min(Math.Abs(c1.g - c2.g), Math.Abs(c1.b - c2.b)));
-        #var a = 1.0f - (Math.Abs(c1.r - c2.r) + Math.Abs(c1.g - c2.g) + Math.Abs(c1.b - c2.b)) / 3.0f ;
-        a = Single(1) - Math.Max(Math.Abs(c1.r - c2.r), Math.Max(Math.Abs(c1.g - c2.g), Math.Abs(c1.b - c2.b)))
-        cols1[i] = Color(c1.r, c1.g, c1.b, a)
-    tex.SetPixels(cols1)
-    tex.Apply()
+        a = 1.0
+        if c1 != c2:
+            a = Single(1) - Math.Max(Math.Abs(c1.r - c2.r), Math.Max(Math.Abs(c1.g - c2.g), Math.Abs(c1.b - c2.b)))
+            cols1[i] = Color(c1.r, c1.g, c1.b, a)
+        if autofit and a > 0.05:
+            y = i // width
+            x = i - y*width
+            if x < x1: x1 = x
+            if x > x2: x2 = x
+            if y < y1: y1 = y
+            if y > y2: y2 = y
+    if autofit:
+        def irnd(x):
+            return x + x%2
+        # add padding then truncate
+        padding = 4
+        x1,y1 = max(0, irnd(x1-padding)), max(0, irnd(y1-padding))
+        x2,y2 = min(width, irnd(x2+padding)), min(height, irnd(y2+padding))
+        Object.Destroy(tex)
+        w,h = x2-x1, y2-y1
+        tex = Texture2D(x2-x1, y2-y1, TextureFormat.ARGB32, False)
+        cols = tex.GetPixels()
+        for i in range(x1, x2):
+            for j in range(y1, y2):
+                cols[(j-y1)*w+(i-x1)] = cols1[j*width+i]
+        tex.SetPixels(cols)
+        tex.Apply()
+    else:
+        tex.SetPixels(cols1)
+        tex.Apply()
     bytes = tex.EncodeToPNG()
     Object.Destroy(tex)
-    RenderTexture.ReleaseTemporary(rt)
-    RenderTexture.ReleaseTemporary(rt2)
     tex = None
     if str.Empty == _path:
-        import UserData
+        import UserData, YS_Assist
         _path = UserData.Create("cap")
         fileName = YS_Assist.GetDateTimeString(DateTime.Now, "", True, True, True, True, True, True, True)
         _path = Path.GetFullPath(Path.Combine(_path, fileName + ".png"))
