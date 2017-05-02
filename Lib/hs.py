@@ -29,6 +29,12 @@ def capture(path=''):
     import screenshot
     screenshot.capture(path)
     
+"""Capture does not use the coroutine which can cause issues with UI"""
+def capture_noblock(path=''):
+    import screenshot
+    screenshot.capture_noblock(path)
+
+    
 @unity
 def quit():
     from Manager import Scene

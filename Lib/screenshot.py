@@ -1,7 +1,6 @@
 from hs import unity as _unity
 
-@_unity
-def capture(_path='', _alpha=True, autofit=True):
+def capture_noblock(_path='', _alpha=True, autofit=True):
     import System
     import Manager
     from System import *
@@ -92,11 +91,14 @@ def capture(_path='', _alpha=True, autofit=True):
     Object.Destroy(tex)
     tex = None
     if str.Empty == _path:
-        import UserData, YS_Assist
+        import UserData, datetime
         _path = UserData.Create("cap")
-        fileName = YS_Assist.GetDateTimeString(DateTime.Now, "", True, True, True, True, True, True, True)
+        fileName = datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')[:-3]
         _path = Path.GetFullPath(Path.Combine(_path, fileName + ".png"))
         Console.WriteLine("Capture: " + _path)
     File.WriteAllBytes(_path, bytes)
     return True
 
+@_unity
+def capture(_path='', _alpha=True, autofit=True):
+    capture_noblock(_path, _alpha, autofit)
