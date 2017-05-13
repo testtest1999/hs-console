@@ -60,7 +60,9 @@ def capture_noblock(_path='', _alpha=True, autofit=True):
         a = 1.0
         if c1 != c2:
             a = Single(1) - Math.Max(Math.Abs(c1.r - c2.r), Math.Max(Math.Abs(c1.g - c2.g), Math.Abs(c1.b - c2.b)))
-            cols1[i] = Color(c1.r, c1.g, c1.b, a)
+        else:
+            a = Single(1) if c1.a < 0.05 else c1.a # handle bad alpha rendering
+        cols1[i] = Color(c1.r, c1.g, c1.b, a)
         if autofit and a > 0.05:
             y = i // width
             x = i - y*width
